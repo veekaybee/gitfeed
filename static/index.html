@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GitFeed</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .post-card {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .post-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .post-content {
+            padding: 15px;
+        }
+
+        .post-footer {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <h1>Home &nbsp;&nbsp;&nbsp;</h1>
+            </a>
+        </div>
+    </nav>
+    <div class="container mt-5 pt-5">
+        <h1 class="mb-4">Posts with GitHub Links</h1>
+        <div id="postContainer">
+            <p>Loading posts...</p>
+        </div>
+        <nav aria-label="Post navigation">
+            <ul class="pagination" id="pagination"></ul>
+        </nav>
+    </div>
+    <script>
+        $(document).ready(function () {
+            const postsPerPage = 10;
+            let currentPage = 1;
+            let allPosts = [];
+
+            const advancedUrlRegex = /(?:(?:https?|ftp):\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)(?:\/[^\s]*)?/g;
+
+            function linkifyText(text) {
+                return text.replace(advancedUrlRegex, url => {
+                    let href = url;
+                    if (!url.startsWith('http')) {
+                        href = 'https://' + url;
+                    }
+                    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="word-wrap: break-word; word-break: break-all; max-width: 100%; display: inline-block;">${url}</a>`;
+                });
+            }
+
+            function displayPosts(page) {
+                const startIndex = (page - 1) * postsPerPage;
+                const endIndex = startIndex + postsPerPage;
+                const paginatedPosts = allPosts.slice(startIndex, endIndex);
+
+                let feedHtml = '';
+                paginatedPosts.forEach(post => {
+                    const linkifiedText = linkifyText(post.URI || '');
+                    feedHtml += `
+            <div class="post-card">
+                <div class="post-header">
+                    <strong>User: <a href="https://bsky.app/profile/${post.Did}" style="word-wrap: break-word; word-break: break-all;">${post.Did}</a></strong>
+                    <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}" style="word-wrap: break-word; word-break: break-all;">${post.Rkey}</a></strong>
+                    <small class="text-muted float-end">Posted: ${post.CreatedAt}</small>
+                </div>
+                <div class="post-content">
+                    <p>${linkifiedText}</p>
+                </div>
+            </div>
+        `;
+                });
+                $('#postContainer').empty().append(feedHtml);
+            }
+
+            function updatePagination(totalPosts) {
+                const totalPages = Math.ceil(totalPosts / postsPerPage);
+                let paginationHtml = '';
+
+                // Previous button
+                paginationHtml += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+    `;
+
+                // Page numbers
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationHtml += `
+            <li class="page-item ${currentPage === i ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}">${i}</a>
+            </li>
+        `;
+                }
+
+                // Next button
+                paginationHtml += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    `;
+
+                $('#pagination').html(paginationHtml);
+
+                // Add click handlers for pagination
+                $('.page-link').click(function (e) {
+                    e.preventDefault();
+                    const newPage = parseInt($(this).data('page'));
+                    if (!isNaN(newPage) && newPage > 0 && newPage <= totalPages) {
+                        currentPage = newPage;
+                        displayPosts(currentPage);
+                        updatePagination(totalPosts);
+                    }
+                });
+            }
+
+            $.ajax({
+                url: 'http://localhost:8000/api/v1/posts',
+                method: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    console.log('Received data:', data);
+                    // Sort posts by CreatedAt in reverse chronological order
+                    allPosts = data.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+                    displayPosts(currentPage);
+                    updatePagination(allPosts.length);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error fetching posts:', textStatus, errorThrown);
+                    $('#postContainer').html('<div class="alert alert-danger">Error loading posts. Please try again later.</div>');
+                }
+            });
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

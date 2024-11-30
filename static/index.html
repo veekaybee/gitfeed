@@ -84,6 +84,25 @@
                 });
             }
 
+            function formatTimeUs(timeUs) {
+
+                const timeMs = Math.floor(timeUs / 1000);
+                const date = new Date(timeMs);
+
+
+                const options = {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                };
+
+                return date.toLocaleString('en-US', options);
+            }
+
             $.ajax({
                 url: '/api/v1/posts',
                 method: 'GET',
@@ -98,7 +117,7 @@
                                 <div class="post-header">
                                 <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}" style="word-wrap: break-word; word-break: break-all;">${post.Rkey}</a></strong>
                                 
-                                <small class="text-muted float-end">Posted: ${post.CreatedAt}</small>
+                                <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
                                 </div>
                                 <div class="post-content">
                                 <p>${linkifiedText}</p>

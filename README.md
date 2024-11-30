@@ -12,6 +12,7 @@ Gitfeed consists of a post ingest/delete process and a frontend.
 
 `make run-serve` # Runs the Application
 `make run-ingest` # Runs the ingest from the jetstream
+`curl -X DELETE http://localhost:8080/api/v1/posts` # Deletes all posts from DB
 
 ![architecture.png]()
 

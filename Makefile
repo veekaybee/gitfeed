@@ -29,3 +29,7 @@ run-ingest:
 	CGO_ENABLED=1 go run cmd/ingest/ingest.go
 .PHONY: run-ingest
 
+run-delete:
+	CGO_ENABLED=1 go run cmd/ingest/ingest.go
+.PHONY: run-ingest
+

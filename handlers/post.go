@@ -93,6 +93,18 @@ func (ps *PostService) PostDeleteHandler(w http.ResponseWriter, r *http.Request)
 
 }
 
+func (ps *PostService) PostsDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if err := ps.PostRepository.DeletePosts(); err != nil {
+		log.Printf("Failed to delete post: %s because %v", err)
+		w.WriteHeader(500)
+		return
+	}
+	log.Printf("Deleted all posts %s\n",)
+
+	w.WriteHeader(http.StatusOK)
+
+}
+
 func (ps *PostService) PostGetHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	post, err := ps.PostRepository.GetPost(id)

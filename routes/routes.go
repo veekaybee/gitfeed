@@ -15,6 +15,7 @@ func CreateRoutes(postService *handlers.PostService) {
 	http.HandleFunc("POST /api/v1/post/", postService.PostWriteHandler)
 	http.HandleFunc("DELETE /api/v1/post/{id}", postService.PostDeleteHandler)
 	http.HandleFunc("GET /api/v1/post/{id}", postService.PostGetHandler)
+
 	http.HandleFunc("GET /api/v1/posts", postService.PostsGetHandler)
 	http.HandleFunc("GET /api/v1/timestamp", postService.TimeStampGetHandler)
 

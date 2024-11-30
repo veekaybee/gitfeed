@@ -269,14 +269,14 @@ func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 func (pr *PostRepository) GetTimeStamp() (int64, error) {
 	sqlStmt := `SELECT time_us FROM posts ORDER BY time_us DESC LIMIT 1;`
 	var timeUs int64
-	err := pr.db.QueryRow(sqlStmt).Scan(&timeUs)
+	if err := pr.db.QueryRow(sqlStmt).Scan(&timeUs); err != nil {
 
-	if err == sql.ErrNoRows {
-		return 0, fmt.Errorf("no posts found")
-	}
-	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, fmt.Errorf("no posts found")
+		}
 		return 0, err
 	}
+	log.Printf("%d\n", timeUs)
 
 	return timeUs, nil
 }

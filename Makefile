@@ -13,7 +13,8 @@ vet: fmt
 .PHONY: vet
 
 build:
-	go build hello.go
+	go build cmd/serve/serve.go
+	go build cmd/ingest/ingest.go
 .PHONY: build
 
 test:
@@ -21,7 +22,6 @@ test:
 .PHONY: test
 
 run-serve:
-	CGO_ENABLED=1 go build cmd/serve/serve.go
 	CGO_ENABLED=1 go run cmd/serve/serve.go
 .PHONY: run-serve
 

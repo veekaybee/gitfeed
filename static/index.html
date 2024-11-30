@@ -56,8 +56,6 @@
 <body>
     <nav class="navbar navbar-dark fixed-top">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-            </a>
         </div>
     </nav>
     <div class="container mt-5 pt-5">
@@ -68,9 +66,6 @@
             <div id="postContainer">
                 <p>Loading posts...</p>
             </div>
-            <nav aria-label="Post navigation">
-                <ul class="pagination" id="pagination"></ul>
-            </nav>
     </div>
 
 
@@ -126,6 +121,7 @@
                 dataType: 'json',
                 success: function (data) {
                     const timestamp = new Date(parseInt(data.timestamp));
+                    console.log('Received timestamp:', timestamp);
                     const formattedTime = timestamp.toLocaleString();
                     $('#lastUpdated').text('Last updated: ' + formattedTime);
                 },

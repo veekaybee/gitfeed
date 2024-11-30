@@ -6,33 +6,9 @@ import (
 	"gitfeed/routes"
 	"log"
 	"net/http"
-	"strings"
 
 	"gitfeed/handlers"
-
-	"github.com/gorilla/websocket"
 )
-
-func FindMatches(text, pattern string) bool {
-
-	return strings.Contains(text, pattern)
-
-}
-
-func GetPost(c *websocket.Conn) db.ATPost {
-	for {
-		post := db.ATPost{}
-		err := c.ReadJSON(&post)
-		if err != nil {
-			log.Println("read:", err)
-		}
-		found := FindMatches(post.Commit.Record.Text, "github.com")
-		if found {
-			return post
-		}
-	}
-
-}
 
 func main() {
 
@@ -44,6 +20,7 @@ func main() {
 	}
 
 	// Start post service
+	fmt.Println("Connect to post service...")
 	pr := db.NewPostRepository(database)
 	postService := &handlers.PostService{PostRepository: pr}
 

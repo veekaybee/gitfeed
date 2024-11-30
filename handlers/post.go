@@ -106,6 +106,18 @@ func (ps *PostService) PostGetHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (ps *PostService) TimeStampGetHandler(w http.ResponseWriter, r *http.Request) {
+	ts, err := ps.PostRepository.GetTimeStamp()
+	if err != nil {
+		http.Error(w, "Error fetching timestamp", http.StatusBadRequest)
+		return
+	}
+	log.Printf("Fetch timestamp %s\n %s ", ts)
+
+	w.WriteHeader(http.StatusOK)
+
+}
+
 func (us *PostService) PostsGetHandler(w http.ResponseWriter, r *http.Request) {
 	posts, err := us.PostRepository.GetAllPosts()
 	if err != nil {

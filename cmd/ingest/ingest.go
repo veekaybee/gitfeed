@@ -49,7 +49,8 @@ func IngestPosts(c *websocket.Conn, pr *db.PostRepository) {
 				langs.V = p.Commit.Record.Langs[0]
 			}
 			uri := extractUri(p)
-			if uri != "" {
+
+			if uri != "" && strings.Contains(uri, "github.com") {
 				post := db.DBPost{
 					Did:        p.Did,
 					TimeUs:     p.TimeUs,

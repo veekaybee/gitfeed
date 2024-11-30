@@ -76,7 +76,7 @@ type DBPost struct {
 func InitDB() (*sql.DB, error) {
 
 	var err error
-	DB, err := sql.Open("sqlite3", "gitfeed3.db")
+	DB, err := sql.Open("sqlite3", "gitfeed.db")
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %v", err)
 	}
@@ -131,6 +131,7 @@ type PostRepo interface {
 	WritePost(p DBPost) error
 	DeletePost(uuid string) error
 	GetAllPosts() ([]DBPost, error)
+	GetTimeStamp() (int64, error)
 }
 
 func (pr *PostRepository) GetPost(did string) (*DBPost, error) {
@@ -217,7 +218,8 @@ func (pr *PostRepository) DeletePost(uuid string) error {
 
 func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 	sqlStmt := `SELECT did, time_us, kind, commit_rev, commit_operation, commit_collection, 
-                commit_rkey, record_type, record_created_at, record_langs, commit_cid, record_text, id, record_uri  FROM posts`
+                commit_rkey, record_type, record_created_at, record_langs, commit_cid, record_text, id, record_uri  FROM posts
+				order by time_us desc LIMIT 10`
 
 	rows, err := pr.db.Query(sqlStmt)
 	if err != nil {
@@ -262,4 +264,19 @@ func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 
 	return posts, nil
 
+}
+
+func (pr *PostRepository) GetTimeStamp() (int64, error) {
+	sqlStmt := `SELECT time_us FROM posts ORDER BY time_us DESC LIMIT 1;`
+	var timeUs int64
+	err := pr.db.QueryRow(sqlStmt).Scan(&timeUs)
+
+	if err == sql.ErrNoRows {
+		return 0, fmt.Errorf("no posts found")
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	return timeUs, nil
 }

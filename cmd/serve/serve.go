@@ -28,6 +28,6 @@ func main() {
 	routes.CreateRoutes(postService)
 
 	log.Printf("Starting gitfeed server...")
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(":80", nil))
 
 }

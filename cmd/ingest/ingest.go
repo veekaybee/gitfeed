@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"gitfeed/db"
+	"gitfeed/handlers"
 
 	"log"
 	"os"
@@ -18,18 +19,6 @@ func FindMatches(text, pattern string) bool {
 
 	return strings.Contains(text, pattern)
 
-}
-
-func extractUri(p db.ATPost) string {
-	var uri string
-	for _, facet := range p.Commit.Record.Facets {
-		for _, feature := range facet.Features {
-			if feature.Type == "app.bsky.richtext.facet#link" {
-				uri = feature.URI
-			}
-		}
-	}
-	return uri
 }
 
 func IngestPosts(c *websocket.Conn, pr *db.PostRepository) {
@@ -48,7 +37,7 @@ func IngestPosts(c *websocket.Conn, pr *db.PostRepository) {
 				langs.Valid = true
 				langs.V = p.Commit.Record.Langs[0]
 			}
-			uri := extractUri(p)
+			uri := handlers.ExtractUri(p)
 
 			if uri != "" && FindMatches(uri, "github.com") {
 				post := db.DBPost{

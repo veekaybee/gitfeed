@@ -18,7 +18,7 @@ type PostService struct {
 	PostRepository db.PostRepo
 }
 
-func extractUri(p db.ATPost) string {
+func ExtractUri(p db.ATPost) string {
 	var uri string
 	for _, facet := range p.Commit.Record.Facets {
 		for _, feature := range facet.Features {
@@ -51,7 +51,7 @@ func (ps *PostService) PostWriteHandler(w http.ResponseWriter, r *http.Request) 
 			langs.Valid = true
 			langs.V = p.Commit.Record.Langs[0]
 		}
-		uri := extractUri(p)
+		uri := ExtractUri(p)
 		if uri != "" {
 			post := db.DBPost{
 				Did:        p.Did,
@@ -99,7 +99,7 @@ func (ps *PostService) PostsDeleteHandler(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(500)
 		return
 	}
-	log.Printf("Deleted all posts %s\n",)
+	log.Printf("Deleted all posts %s\n")
 
 	w.WriteHeader(http.StatusOK)
 

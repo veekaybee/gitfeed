@@ -10,10 +10,12 @@ This app is experimental and there are no unit tests, integration tests, or load
 
 Gitfeed consists of a post ingest/delete process and a frontend. 
 
- `git clone`
+`git clone`
 
 `make run-serve` # Runs the Application
+
 `make run-ingest` # Runs the ingest from the jetstream
+
 `curl -X DELETE http://localhost:80/api/v1/posts` # Deletes all posts from DB
 
 ![](/architecture.png)

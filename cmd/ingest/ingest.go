@@ -85,6 +85,8 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	defer database.Close()
+
 	pr := db.NewPostRepository(database)
 
 	postTableColumns := map[string]string{
@@ -128,8 +130,6 @@ func main() {
 	defer c.Close()
 
 	go IngestPosts(c, pr)
-
-	defer database.Close()
 
 	<-ctx.Done()
 }

@@ -2,7 +2,9 @@
 
 Collects all posts with GitHub links from the [Bluesky JetStream.](https://docs.bsky.app/blog/jetstream) [Code here.](https://github.com/bluesky-social/jetstream) by chronological order and displays the last 10 in a reverse-chronological stream so you can see what GitHub repos people are chatting about on Bluesky.  There are about ~100 of these events per day. 
 
-This app is experimental and there are no unit tests, integration tests, or capacity planning, ✨ just vibes. ✨
+This app is experimental and there are no unit tests, integration tests, or load planning, ✨ just vibes. ✨
+
+![](/ui.png)
 
 ## Running: 
 

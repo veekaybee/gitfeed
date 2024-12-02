@@ -8,7 +8,11 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="shortcut icon" href="/favicon.ico" />
+
+    <link rel="manifest" href="/site.webmanifest">
+    <script src=" https://code.jquery.com/jquery-3.6.0.min.js">
+    </script>
     <style>
         .post-card {
             margin-bottom: 8px;
@@ -153,7 +157,8 @@
             <div class="container">
                 <span>💙 </span>
                 <br>
-                <span>&copy; 2024 Vicki Boykis</span>
+                <span>&copy; 2024 Vicki Boykis, icon by <a
+                        href="https://www.freepik.com/author/user8839173/icons">iconixar</a></span>
             </div>
         </footer>
     </div>
@@ -163,14 +168,20 @@
         $(document).ready(function () {
 
             const advancedUrlRegex = /(?:(?:https?|ftp):\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)(?:\/[^\s]*)?/g;
-
             function linkifyText(text) {
                 return text.replace(advancedUrlRegex, url => {
                     let href = url;
                     if (!url.startsWith('http')) {
                         href = 'https://' + url;
                     }
-                    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="word-wrap: break-word; word-break: break-all; max-width: 100%; display: inline-block;">${url}</a>`;
+
+                    // Extract everything after github.com/
+                    let displayText = url;
+                    if (url.includes('github.com/')) {
+                        displayText = url.split('github.com/')[1];
+                    }
+
+                    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="word-wrap: break-word; word-break: break-all; max-width: 100%; display: inline-block;">${displayText}</a>`;
                 });
             }
 
@@ -193,6 +204,26 @@
                 return date.toLocaleString('en-US', options);
             }
 
+            function getTimeAgo(timestamp) {
+                const now = new Date();
+                const past = new Date(timestamp);
+                const diffInMinutes = Math.floor((now - past) / (1000 * 60));
+
+                if (diffInMinutes < 1) {
+                    return 'just now';
+                } else if (diffInMinutes === 1) {
+                    return '1 minute ago';
+                } else if (diffInMinutes < 60) {
+                    return `${diffInMinutes} minutes ago`;
+                } else if (diffInMinutes < 1440) {
+                    const hours = Math.floor(diffInMinutes / 60);
+                    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+                } else {
+                    const days = Math.floor(diffInMinutes / 1440);
+                    return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+                }
+            }
+
             $.ajax({
                 url: '/api/v1/posts',
                 method: 'GET',
@@ -210,7 +241,7 @@
                                 <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
                                 </div>
                                 <div class="post-content">
-                                <p><i class="bi bi-github"></i>${linkifiedText}</p>
+                                <p>&nbsp;<i class="bi bi-github"></i>&nbsp;${linkifiedText}</p>
                                 </div>
                             </div>
                             `;
@@ -232,7 +263,8 @@
                     const timestamp = new Date(parseInt(data.timestamp));
                     console.log('Received timestamp:', timestamp);
                     const formattedTime = timestamp.toLocaleString();
-                    $('#lastUpdated').text('Last updated: ' + formattedTime);
+                    const xTimeAgo = getTimeAgo(formattedTime);
+                    $('#lastUpdated').text('Last updated: ' + xTimeAgo);
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     $('#lastUpdated').text('Last updated: Error loading timestamp');

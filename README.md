@@ -10,7 +10,7 @@ This app is experimental and there are no unit tests, integration tests, or load
 
 Gitfeed consists of a post ingest/delete process and a frontend. 
 
-`git clone`
+ `git clone`
 
 `make run-serve` # Runs the Application
 
@@ -20,13 +20,15 @@ Gitfeed consists of a post ingest/delete process and a frontend.
 
 ![](/architecture.png)
 
-## About the Jetstream and Datamodel 
+## About the Jetstream and data model 
 
-Bluesky is an open social network running on [the AT Protocol](https://github.com/bluesky-social/pds?tab=readme-ov-file#what-is-at-protocol) that [operates a firehose](https://docs.bsky.app/docs/advanced-guides/firehose), an authenticated stream of events with all activity on the network. Anyone can consume/produce against the firehose [following the developer guidelines.](https://docs.bsky.app/docs/support/developer-guidelines). One of the key features developers can do is [create custom feeds of content](https://docs.bsky.app/docs/starter-templates/custom-feeds) based on either simple heuristics like regex, or collecting data from the firehose for machine-learning style feeds including lookup with embedding models, activity aggregation, etc.  
+Bluesky is an open social network running on [the AT Protocol](https://github.com/bluesky-social/pds?tab=readme-ov-file#what-is-at-protocol) that [operates a firehose](https://docs.bsky.app/docs/advanced-guides/firehose), an authenticated stream of events with all activity on the network. Anyone can consume/produce against the firehose [following the developer guidelines.](https://docs.bsky.app/docs/support/developer-guidelines). 
 
-This repo started exploring the idea of creating a custom feed and publishing it to my own PDS [in Go](https://github.com/veekaybee/gitfeed/blob/main/publishXRPC.go). It since moved to consuming directly from Jetstream, a lighter (and less stable) implementation that doesn't include 
+One of the key features developers can do is [create custom feeds of content](https://docs.bsky.app/docs/starter-templates/custom-feeds) based on either simple heuristics like regex, or collecting data from the firehose for machine-learning style feeds including lookup with embedding models, activity aggregation, etc.  
 
-## Looking at events in the firehose 
+This repo started exploring the idea of creating a custom feed and publishing it to my own PDS [in Go](https://github.com/veekaybee/gitfeed/blob/main/publishXRPC.go). It since moved to consuming directly from Jetstream, a lighter (and less stable) implementation that doesn't include the full scope of history that the firehose does [for every entry in a user's PDS.](https://jazco.dev/2024/09/24/jetstream/.) The tradeoff is that we are now consuming untrusted elements; however, since this is from the bluesky social relay, it's fine in ways that it might not be for other, less official relays.   
+
+## Looking at events in the Jetstream
 
 You can check GitHub events streaming to jetstream with: 
 

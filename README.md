@@ -1,6 +1,6 @@
 # GitFeed
 
-Collects all posts with GitHub links from the [Bluesky JetStream.](https://docs.bsky.app/blog/jetstream). [Code here.](https://github.com/bluesky-social/jetstream) by chronological order and displays the last 10 in a reverse-chronological stream so you can see what GitHub repos people are chatting about on Bluesky.  There are about ~100 of these events per day. 
+Collects all posts with GitHub links from the [Bluesky JetStream.](https://docs.bsky.app/blog/jetstream) [Code here.](https://github.com/bluesky-social/jetstream) by chronological order and displays the last 10 in a reverse-chronological stream so you can see what GitHub repos people are chatting about on Bluesky.  There are about ~100 of these events per day. 
 
 This app is experimental and there are no unit tests, integration tests, or capacity planning, ✨ just vibes. ✨
 
@@ -12,7 +12,7 @@ Gitfeed consists of a post ingest/delete process and a frontend.
 
 `make run-serve` # Runs the Application
 `make run-ingest` # Runs the ingest from the jetstream
-`curl -X DELETE http://localhost:8080/api/v1/posts` # Deletes all posts from DB
+`curl -X DELETE http://localhost:8000/api/v1/posts` # Deletes all posts from DB
 
 ![architecture.png]()
 

@@ -130,7 +130,7 @@ type PostRepo interface {
 	GetPost(uuid string) (*DBPost, error)
 	WritePost(p DBPost) error
 	DeletePost(uuid string) error
-	DeletePosts(uuid string) error
+	DeletePosts() error
 	GetAllPosts() ([]DBPost, error)
 	GetTimeStamp() (int64, error)
 }
@@ -218,7 +218,7 @@ func (pr *PostRepository) DeletePost(uuid string) error {
 }
 
 func (pr *PostRepository) DeletePosts() error {
-	sqlStmt := `DELETE * FROM posts;`
+	sqlStmt := `DELETE FROM posts;`
 
 	_, err := pr.db.Exec(sqlStmt)
 	if err != nil {

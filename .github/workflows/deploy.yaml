@@ -19,24 +19,16 @@ jobs:
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
       - name: Sync files
-        env:
-            REMOTE_USER: ${{ vars.REMOTE_USER }}
-            REMOTE_HOST: ${{ vars.REMOTE_HOST }}
-            REMOTE_PATH: ${{ vars.REMOTE_PATH }}
         run: |
           rsync -avz --delete \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'node_modules/' \
-            ./ $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH
+            ./ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
       - name: Execute make commands
-        env:
-          REMOTE_USER: ${{ vars.REMOTE_USER }}
-          REMOTE_HOST: ${{ vars.REMOTE_HOST }}
-          REMOTE_PATH: ${{ vars.REMOTE_PATH }}
         run: |
-          ssh $REMOTE_USER@$REMOTE_HOST "\
-            cd $REMOTE_PATH && \
-            nohup make run-ingest &  && \
-            nohup make run-serve & 
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
+            cd ${{ secrets.REMOTE_PATH }} && \
+          nohup make run-ingest &  && \
+          nohup make run-serve & "

@@ -7,6 +7,7 @@ import (
 
 func CreateRoutes(postService *handlers.PostService) {
 	fs := http.FileServer(http.Dir("./static"))
+	http.Handle("GET /static/favicon.ico", fs)
 	http.Handle("GET /", fs)
 
 	/*Post Routes*/

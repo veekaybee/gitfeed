@@ -1,13 +1,12 @@
-name: Sync and Make
+name: Push to prod
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch: # manual
 
 jobs:
   deploy:
-    environment: gitfeed
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,5 +29,6 @@ jobs:
         run: |
           ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
             cd ${{ secrets.REMOTE_PATH }} && \
-          nohup make run-ingest &  && \
-          nohup make run-serve & "
+            nohup make run-ingest > ingest.log 2>&1 & \
+            nohup make run-serve > serve.log 2>&1 & \
+            echo 'Started processes'"

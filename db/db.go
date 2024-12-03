@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -119,11 +120,12 @@ func (pr *PostRepository) CreateTableIfNotExists(tableName string, columns map[s
 }
 
 type PostRepository struct {
-	db *sql.DB
+	db   *sql.DB
+	lock *sync.Mutex
 }
 
 func NewPostRepository(db *sql.DB) *PostRepository {
-	return &PostRepository{db: db}
+	return &PostRepository{db: db, lock: &sync.Mutex{}}
 }
 
 type PostRepo interface {
@@ -136,6 +138,9 @@ type PostRepo interface {
 }
 
 func (pr *PostRepository) GetPost(did string) (*DBPost, error) {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
+
 	sqlStmt := `SELECT *
                 FROM posts 
                 WHERE did = $1`
@@ -169,6 +174,8 @@ func (pr *PostRepository) GetPost(did string) (*DBPost, error) {
 }
 
 func (pr *PostRepository) WritePost(p DBPost) error {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
 	sqlStmt := `INSERT INTO posts (did, 
 	time_us, 
 	kind, 
@@ -207,6 +214,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13)`
 }
 
 func (pr *PostRepository) DeletePost(uuid string) error {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
 	sqlStmt := `DELETE FROM posts WHERE postid = $1`
 
 	_, err := pr.db.Exec(sqlStmt, uuid)
@@ -218,6 +227,8 @@ func (pr *PostRepository) DeletePost(uuid string) error {
 }
 
 func (pr *PostRepository) DeletePosts() error {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
 	sqlStmt := `DELETE FROM posts;`
 
 	_, err := pr.db.Exec(sqlStmt)
@@ -229,6 +240,8 @@ func (pr *PostRepository) DeletePosts() error {
 }
 
 func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
 	sqlStmt := `SELECT did, time_us, kind, commit_rev, commit_operation, commit_collection, 
                 commit_rkey, record_type, record_created_at, record_langs, commit_cid, record_text, id, record_uri  FROM posts
 				order by time_us desc LIMIT 10`
@@ -279,6 +292,8 @@ func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 }
 
 func (pr *PostRepository) GetTimeStamp() (int64, error) {
+	pr.lock.Lock()
+	defer pr.lock.Unlock()
 	sqlStmt := `SELECT time_us FROM posts ORDER BY time_us DESC LIMIT 1;`
 	var timeUs int64
 	if err := pr.db.QueryRow(sqlStmt).Scan(&timeUs); err != nil {

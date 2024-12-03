@@ -26,12 +26,12 @@ jobs:
             ./ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
       - name: Execute make commands
-      run: |
-        ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
-          cd ${{ secrets.REMOTE_PATH }} && \
-          if lsof -ti :80; then \
-            lsof -ti :80 | xargs kill -9; \
-          fi && \
-          nohup make run-ingest > ingest.log 2>&1 & \
-          nohup make run-serve > serve.log 2>&1 & \
-          echo 'Processes restarted successfully'"
+        run: |
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
+            cd ${{ secrets.REMOTE_PATH }} && \
+            if lsof -ti :80; then \
+              lsof -ti :80 | xargs kill -9; \
+            fi && \
+            nohup make run-ingest > ingest.log 2>&1 & \
+            nohup make run-serve > serve.log 2>&1 & \
+            echo 'Processes restarted successfully'"

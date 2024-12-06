@@ -36,7 +36,7 @@ jobs:
         run: |
           ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
           cd ${{ secrets.REMOTE_PATH }} && \
-          kill `ps -ef| pgrep -f 'go run cmd/ingest'`
-          kill `ps -ef| pgrep -f 'go run cmd/serve'`
+          kill `ps -ef| pgrep -f 'go run cmd/ingest'` \
+          kill `ps -ef| pgrep -f 'go run cmd/serve'` \
           nohup ./ingest > ingest.log 2>&1 & && \
           nohup ./serve > serve.log 2>&1 &"

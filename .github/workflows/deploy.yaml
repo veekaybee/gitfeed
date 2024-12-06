@@ -30,9 +30,7 @@ jobs:
 
       - name: Sync executables
         run: |
-          rsync -avz \
-            ingest ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }} \
-            serve ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
+          rsync -avz ingest serve ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
       - name: Restart executables
         run: |

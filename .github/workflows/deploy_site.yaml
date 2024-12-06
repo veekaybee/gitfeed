@@ -1,0 +1,37 @@
+name: Sync Static Files
+
+on:
+  push:
+    paths:
+      - 'static/**'
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get changed files in static directory
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: static/**
+
+      - name: Install SSH key
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+        
+      
+          
+      - name: Sync files if changes detected
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+            rsync -avz --delete ./static/ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}/static/
+            

@@ -17,21 +17,28 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
-      - name: Sync files
-        run: |
-          rsync -avz --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude 'node_modules/' \
-            ./ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21.x'
+      
+      - name: Lint
+        run: make lint
+      
+      - name: Build
+        run: make build 
 
-      - name: Execute make commands
+      - name: Sync executables
+        run: |
+          rsync -avz \
+            ingest ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }} \
+            serve ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
+
+      - name: Restart executables
         run: |
           ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
-            cd ${{ secrets.REMOTE_PATH }} && \
-            if lsof -ti :80; then \
-              lsof -ti :80 | xargs kill -9; \
-            fi && \
-            nohup make run-ingest > ingest.log 2>&1 & \
-            nohup make run-serve > serve.log 2>&1 & \
-            echo 'Processes restarted successfully'"
+          cd ${{ secrets.REMOTE_PATH }} && \
+          kill `ps -ef| pgrep -f 'go run cmd/ingest'`
+          kill `ps -ef| pgrep -f 'go run cmd/serve'`
+          nohup ./ingest > ingest.log 2>&1 & && \
+          nohup ./serve > serve.log 2>&1 &"

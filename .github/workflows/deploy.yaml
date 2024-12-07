@@ -21,6 +21,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21.x'
+            cache-dependency-path: |
+             go.sum
       
       - name: Fmt
         run: make fmt
@@ -34,9 +36,9 @@ jobs:
 
       - name: Restart executables
         run: |
-          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
             cd ${{ secrets.REMOTE_PATH }} && \
             pkill -f 'go run cmd/ingest' || true && \
             pkill -f 'go run cmd/serve' || true && \
             nohup ./ingest > ingest.log 2>&1 & \
-            nohup ./serve > serve.log 2>&1 &"
+            nohup ./serve > serve.log 2>&1 &

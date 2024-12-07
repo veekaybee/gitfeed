@@ -35,10 +35,15 @@ jobs:
           rsync -avz ingest serve ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
       - name: Restart executables
-        run: |
-          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} "\
-            cd ${{ secrets.REMOTE_PATH }} && \
-            pkill -f 'go run cmd/ingest' || true && \
-            pkill -f 'go run cmd/serve' || true && \
-            nohup ./ingest > ingest.log 2>&1 & \
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd ${{ secrets.REMOTE_PATH }} 
+            pkill -f 'go run cmd/ingest' || true && 
+            pkill -f 'go run cmd/serve' || true && 
+            nohup ./ingest > ingest.log 2>&1 & 
             nohup ./serve > serve.log 2>&1"

@@ -243,7 +243,7 @@ func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 	pr.lock.Lock()
 	defer pr.lock.Unlock()
 	sqlStmt := `SELECT  DISTINCT did, time_us, kind, commit_rev, commit_operation, commit_collection, 
-                commit_rkey, record_type, record_created_at, record_langs, commit_cid, record_text, id, record_uri  FROM posts
+                commit_rkey, record_type, record_created_at, record_langs, commit_cid, record_text, record_uri  FROM posts
 				order by time_us desc LIMIT 10`
 
 	rows, err := pr.db.Query(sqlStmt)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gitfeed/db"
 	"gitfeed/handlers"
+	"time"
 
 	"log"
 	"os"
@@ -21,13 +22,36 @@ func FindMatches(text, pattern string) bool {
 
 }
 
-func IngestPosts(c *websocket.Conn, pr *db.PostRepository) {
+// https://github.com/gorilla/websocket/blob/main/examples/command/main.go
+const (
+	// Time allowed to write a message to the peer.
+	writeWait = 10 * time.Second
+
+	// Maximum message size allowed from peer.
+	maxMessageSize = 8192
+
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 60 * time.Second
+
+	// Send pings to peer with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
+
+	// Time to wait before force close on connection.
+	closeGracePeriod = 10 * time.Second
+)
+
+func IngestPosts(ws *websocket.Conn, pr *db.PostRepository) {
+	defer ws.Close()
+	ws.SetReadLimit(maxMessageSize)
+	ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error { ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		p := db.ATPost{}
-		err := c.ReadJSON(&p)
+		err := ws.ReadJSON(&p)
 		if err != nil {
-			log.Println("read:", err)
+			break
 		}
+
 		found := FindMatches(p.Commit.Record.Text, "github.com")
 		if found {
 			log.Printf("Post: %v", p)

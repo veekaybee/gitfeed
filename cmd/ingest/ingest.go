@@ -3,90 +3,148 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"gitfeed/db"
 	"gitfeed/handlers"
+	"os"
+	"os/signal"
+	"sync"
 	"time"
 
 	"log"
-	"os"
-	"os/signal"
 	"strings"
 
 	"github.com/gorilla/websocket"
 )
 
+var (
+	ErrMaxReconnectsExceeded = errors.New("maximum reconnection attempts exceeded")
+)
+
+const (
+	maxMessageSize = 512 * 1024 // 512KB
+	pongWait       = 60 * time.Second
+)
+
+type WebSocketManager struct {
+	url            string
+	reconnectDelay time.Duration
+	maxReconnects  int
+	writeWait      time.Duration
+	readWait       time.Duration
+	pingPeriod     time.Duration
+
+	conn           *websocket.Conn
+	mu             sync.Mutex
+	done           chan struct{}
+	isConnected    bool
+	reconnectCount int
+
+	messageHandler func([]byte)
+	errorHandler   func(error)
+
+	postRepo *db.PostRepository
+}
+
+func NewWebSocketManager(url string, postRepo *db.PostRepository) *WebSocketManager {
+	wsm := &WebSocketManager{
+		url:            url,
+		reconnectDelay: 3 * time.Second,
+		writeWait:      10 * time.Second,
+		pingPeriod:     (pongWait * 9) / 10,
+		done:           make(chan struct{}),
+		postRepo:       postRepo,
+		errorHandler:   func(err error) { log.Printf("Error: %v", err) },
+	}
+
+	return wsm
+}
+
+func (w *WebSocketManager) Connect(ctx context.Context) {
+
+	for !w.isConnected {
+
+		time.Sleep(w.reconnectDelay)
+		log.Printf("Connecting to %s", w.url)
+
+		dialer := websocket.Dialer{
+			HandshakeTimeout: 10 * time.Second,
+		}
+
+		conn, _, err := dialer.DialContext(ctx, w.url, nil)
+		if err != nil {
+			w.isConnected = false
+			continue
+		}
+
+		w.conn = conn
+		w.isConnected = true
+	}
+}
+
+// GitHub matches
 func FindMatches(text, pattern string) bool {
 
 	return strings.Contains(text, pattern)
 
 }
 
-// https://github.com/gorilla/websocket/blob/main/examples/command/main.go
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
+func (w *WebSocketManager) readPump(ctx context.Context) {
 
-	// Maximum message size allowed from peer.
-	maxMessageSize = 8192
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Time to wait before force close on connection.
-	closeGracePeriod = 10 * time.Second
-)
-
-func IngestPosts(ws *websocket.Conn, pr *db.PostRepository) {
-	defer ws.Close()
-	ws.SetReadLimit(maxMessageSize)
-	ws.SetReadDeadline(time.Now().Add(pongWait))
-	ws.SetPongHandler(func(string) error { ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	w.Connect(ctx)
+	counter := 0
 	for {
-		p := db.ATPost{}
-		err := ws.ReadJSON(&p)
-		if err != nil {
-			break
-		}
-
-		found := FindMatches(p.Commit.Record.Text, "github.com")
-		if found {
-			log.Printf("Post: %v", p)
-
-			var langs sql.Null[string]
-			if len(p.Commit.Record.Langs) > 0 {
-				langs.Valid = true
-				langs.V = p.Commit.Record.Langs[0]
+		select {
+		case <-ctx.Done():
+			log.Printf("Exiting readPump: got kill signal\n")
+			return
+		default:
+			var post db.ATPost
+			if err := w.conn.ReadJSON(&post); err != nil {
+				w.Connect(ctx)
+				continue
 			}
-			uri := handlers.ExtractUri(p)
+			counter++
+			if counter%100 == 0 {
+				log.Printf("Read %d posts\n", counter)
+			}
 
-			if uri != "" && FindMatches(uri, "github.com") {
-				post := db.DBPost{
-					Did:        p.Did,
-					TimeUs:     p.TimeUs,
-					Kind:       p.Kind,
-					Operation:  p.Commit.Operation,
-					Collection: p.Commit.Collection,
-					Rkey:       p.Commit.Rkey,
-					Cid:        p.Commit.Cid,
-					Type:       p.Commit.Record.Type,
-					CreatedAt:  p.Commit.Record.CreatedAt,
-					Langs:      langs,
-					Text:       p.Commit.Record.Text,
-					URI:        uri,
+			// Process the post
+			if found := FindMatches(post.Commit.Record.Text, "github.com"); found {
+				log.Printf("Post: %v", post)
+
+				var langs sql.Null[string]
+				if len(post.Commit.Record.Langs) > 0 {
+					langs.Valid = true
+					langs.V = post.Commit.Record.Langs[0]
 				}
 
-				err = pr.WritePost(post)
-				if err != nil {
-					log.Fatalf("Failed to write row: %v", err)
+				uri := handlers.ExtractUri(post)
+				if uri != "" && FindMatches(uri, "github.com") {
+					dbPost := db.DBPost{
+						Did:        post.Did,
+						TimeUs:     post.TimeUs,
+						Kind:       post.Kind,
+						Operation:  post.Commit.Operation,
+						Collection: post.Commit.Collection,
+						Rkey:       post.Commit.Rkey,
+						Cid:        post.Commit.Cid,
+						Type:       post.Commit.Record.Type,
+						CreatedAt:  post.Commit.Record.CreatedAt,
+						Langs:      langs,
+						Text:       post.Commit.Record.Text,
+						URI:        uri,
+					}
+
+					if err := w.postRepo.WritePost(dbPost); err != nil {
+						w.errorHandler(fmt.Errorf("failed to write post: %v", err))
+						continue
+					}
+					log.Printf("Wrote Post %v", dbPost.Did)
 				}
-				log.Printf("Wrote Post %v", post.Did)
 			}
 		}
-
 	}
 }
 
@@ -128,21 +186,16 @@ func main() {
 	// start collection
 	fmt.Println("Starting feed...")
 
+	wsManager := NewWebSocketManager(
+		"wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post",
+		pr,
+	)
+	wsManager.reconnectDelay = 5 * time.Second
+
+	log.Printf("connecting to %s\n", wsManager.url)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	// Instantiatiate JetStream Feed
-	u := "wss://jetstream2.us-west.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
-
-	log.Printf("connecting to %s", u)
-
-	c, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if err != nil {
-		log.Fatalln("dial:", err)
-	}
-	defer c.Close()
-
-	go IngestPosts(c, pr)
-
-	<-ctx.Done()
+	wsManager.readPump(ctx)
 }

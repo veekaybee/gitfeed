@@ -41,4 +41,4 @@ jobs:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: ./github/workflows/restart.sh
+          script: .github/workflows/restart.sh

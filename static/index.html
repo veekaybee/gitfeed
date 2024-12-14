@@ -10,6 +10,8 @@
         rel="stylesheet">
     <link rel="shortcut icon" href="/favicon.ico" />
 
+    <script src="https://tarptaeya.github.io/repo-card/repo-card.js"></script>
+
     <link rel="manifest" href="/site.webmanifest">
     <script src=" https://code.jquery.com/jquery-3.6.0.min.js">
     </script>
@@ -183,6 +185,31 @@
                 return date.toLocaleString('en-US', options);
             }
 
+            function createRepoCard(repoUrl) {
+                // Extract username and repository from GitHub URL
+                const githubRegex = /github\.com\/([^\/]+)\/([^\/\s]+)/;
+                const match = repoUrl.match(githubRegex);
+
+                if (!match) return repoUrl; // Return original URL if not a GitHub repo
+
+                const [, username, repository] = match;
+
+                return `
+        <div class="repo-card">
+            <div class="repo-header">
+                <i class="bi bi-github"></i>
+                <a href="${repoUrl}" target="_blank" rel="noopener noreferrer">
+                    ${username}/${repository}
+                </a>
+            </div>
+            <div class="repo-details" id="repo-${username}-${repository}">
+                <div class="loading">Loading repository details...</div>
+            </div>
+        </div>
+    `;
+            }
+
+
             function getTimeAgo(timestamp) {
                 const now = new Date();
                 const past = new Date(timestamp);
@@ -211,25 +238,69 @@
                     console.log('Received data:', data);
                     var feedHtml = '';
                     $.each(data, function (index, post) {
-                        const linkifiedText = linkifyText(post.URI || '');
+                        // Extract GitHub URL if it exists
+                        const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
+                        const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
+
+                        let contentHtml;
+                        if (githubMatch) {
+                            // If there's a GitHub URL, just create the repo card
+                            contentHtml = createRepoCard(githubMatch[0]);
+                        } else {
+                            // If no GitHub URL, linkify any other URLs in the text
+                            contentHtml = linkifyText(post.URI || '');
+                        }
+
                         feedHtml += `
-                            <div class="post-card">
-                                <div class="post-header">
-                                <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}" style="word-wrap: break-word; word-break: break-all;">${post.Rkey}</a></strong>
-                                
-                                <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
-                                </div>
-                                <div class="post-content">
-                                <p>&nbsp;<i class="bi bi-github"></i>&nbsp;${linkifiedText}</p>
-                                </div>
-                            </div>
-                            `;
+                <div class="post-card">
+                    <div class="post-header">
+                        <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}"
+                            style="word-wrap: break-word; word-break: break-all;">${post.Rkey}</a></strong>
+                        <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
+                    </div>
+                    <div class="post-content">
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
                     });
                     $('#postContainer').empty().append(feedHtml);
+
+                    // After rendering, fetch repository details for each repo card
+                    $('.repo-card').each(function() {
+                        const repoUrl = $(this).find('a').attr('href');
+                        const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+
+                        // Fetch repository details from GitHub API
+                        $.ajax({
+                            url: `https://api.github.com/repos/${username}/${repository}`,
+                            method: 'GET',
+                            success: function(repoData) {
+                                const repoDetails = `
+                        <div class="repo-info">
+                            <p>${repoData.description || 'No description available'}</p>
+                            <div class="repo-stats">
+                                <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
+                                <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
+                                <span>${repoData.language || 'Unknown language'}</span>
+                            </div>
+                        </div>
+                    `;
+                                $(`#repo-${username}-${repository}`).html(repoDetails);
+                            },
+                            error: function() {
+                                $(`#repo-${username}-${repository}`).html(
+                                        '<div class="error">Error loading repository details</div>'
+                                );
+                            }
+                        });
+                    });
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     console.error('Error fetching posts:', textStatus, errorThrown);
-                    $('#postContainer').html('<div class="alert alert-danger">Error loading posts. Please try again later.</div>');
+                    $('#postContainer').html(
+                            '<div class="alert alert-danger">Error loading posts. Please try again later.</div>'
+                    );
                 }
             });
 

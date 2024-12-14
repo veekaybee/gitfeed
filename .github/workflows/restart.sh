@@ -8,10 +8,6 @@ echo "Killed ingest processes"
 pkill 'serve'
 echo "Killed serve processes"
 
-# Wait a moment for processes to clean up
-sleep 2
-echo "Waited for cleanup"
-
 nohup ./ingest > ingest.log 2>&1 &
 echo "Started ingest process"
 

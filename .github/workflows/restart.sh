@@ -2,10 +2,10 @@ cd /var/www/html
 echo "Changed directory to /var/www/html"
 
 # Only kill if processes exist
-pgrep -f 'ingest' && pkill -f 'ingest'
+pkill -f 'ingest'
 echo "Killed ingest processes"
 
-pgrep -f 'serve' && pkill -f 'serve'
+pkill -f 'serve'
 echo "Killed serve processes"
 
 # Wait a moment for processes to clean up

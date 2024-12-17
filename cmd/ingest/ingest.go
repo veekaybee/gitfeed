@@ -1,4 +1,4 @@
-package main
+package ingest
 
 import (
 	"context"
@@ -90,6 +90,43 @@ func FindMatches(text, pattern string) bool {
 
 }
 
+func ProcessPost(post db.ATPost) db.DBPost {
+	dbpost := db.DBPost{}
+
+	if found := FindMatches(post.Commit.Record.Text, "github.com"); found {
+		log.Printf("Post: %v", post)
+
+		var langs sql.Null[string]
+		if len(post.Commit.Record.Langs) > 0 {
+			langs.Valid = true
+			langs.V = post.Commit.Record.Langs[0]
+		}
+
+		uri := handlers.ExtractUri(post)
+		if uri != "" && FindMatches(uri, "github.com") {
+			dbPost := db.DBPost{
+				Did:        post.Did,
+				TimeUs:     post.TimeUs,
+				Kind:       post.Kind,
+				Operation:  post.Commit.Operation,
+				Collection: post.Commit.Collection,
+				Rkey:       post.Commit.Rkey,
+				Cid:        post.Commit.Cid,
+				Type:       post.Commit.Record.Type,
+				CreatedAt:  post.Commit.Record.CreatedAt,
+				Langs:      langs,
+				Text:       post.Commit.Record.Text,
+				URI:        uri,
+			}
+			dbpost = dbPost
+
+		}
+
+	}
+
+	return dbpost
+}
+
 func (w *WebSocketManager) readPump(ctx context.Context) {
 
 	w.Connect(ctx)
@@ -111,39 +148,13 @@ func (w *WebSocketManager) readPump(ctx context.Context) {
 			}
 
 			// Process the post
-			if found := FindMatches(post.Commit.Record.Text, "github.com"); found {
-				log.Printf("Post: %v", post)
+			dbPost := ProcessPost(post)
 
-				var langs sql.Null[string]
-				if len(post.Commit.Record.Langs) > 0 {
-					langs.Valid = true
-					langs.V = post.Commit.Record.Langs[0]
-				}
-
-				uri := handlers.ExtractUri(post)
-				if uri != "" && FindMatches(uri, "github.com") {
-					dbPost := db.DBPost{
-						Did:        post.Did,
-						TimeUs:     post.TimeUs,
-						Kind:       post.Kind,
-						Operation:  post.Commit.Operation,
-						Collection: post.Commit.Collection,
-						Rkey:       post.Commit.Rkey,
-						Cid:        post.Commit.Cid,
-						Type:       post.Commit.Record.Type,
-						CreatedAt:  post.Commit.Record.CreatedAt,
-						Langs:      langs,
-						Text:       post.Commit.Record.Text,
-						URI:        uri,
-					}
-
-					if err := w.postRepo.WritePost(dbPost); err != nil {
-						w.errorHandler(fmt.Errorf("failed to write post: %v", err))
-						continue
-					}
-					log.Printf("Wrote Post %v", dbPost.Did)
-				}
+			if err := w.postRepo.WritePost(dbPost); err != nil {
+				w.errorHandler(fmt.Errorf("failed to write post: %v", err))
+				continue
 			}
+			log.Printf("Wrote Post %v", dbPost.Did)
 		}
 	}
 }

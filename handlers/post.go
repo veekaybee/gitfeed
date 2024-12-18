@@ -95,11 +95,11 @@ func (ps *PostService) PostDeleteHandler(w http.ResponseWriter, r *http.Request)
 
 func (ps *PostService) PostsDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	if err := ps.PostRepository.DeletePosts(); err != nil {
-		log.Printf("Failed to delete post: %s because %v", err)
+		log.Printf("Failed to delete post because %v", err)
 		w.WriteHeader(500)
 		return
 	}
-	log.Printf("Deleted all posts %s\n")
+	log.Printf("Deleted all posts\n")
 
 	w.WriteHeader(http.StatusOK)
 
@@ -112,7 +112,7 @@ func (ps *PostService) PostGetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error fetching post", http.StatusBadRequest)
 		return
 	}
-	log.Printf("Fetch post %s\n %s ", id, post)
+	log.Printf("Fetch post %v+\n %v+ ", id, post)
 
 	w.WriteHeader(http.StatusOK)
 

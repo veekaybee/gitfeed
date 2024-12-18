@@ -28,11 +28,14 @@ jobs:
         run: make fmt
       
       - name: Build
-        run: make build 
+        run: make build
+
+      - name: Fmt
+        run: make test
 
       - name: Sync executables
         run: |
-          rsync -avz ingest serve ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
+          rsync -avz --exclude='/*/.local' ingest serve ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
     
       - name: Restart executables

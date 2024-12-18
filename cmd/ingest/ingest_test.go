@@ -1,4 +1,4 @@
-package ingest
+package main
 
 import (
 	"database/sql"

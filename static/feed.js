@@ -42,32 +42,30 @@ function getCachedPosts() {
  * Renders posts to the container
  * @param {Array} posts - Array of posts to render
  */
-function renderPosts(posts) {
-    let feedHtml = '';
-    for (const post of posts) {
-        const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
-        const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
+function renderPost(post) {
+    // Always linkify the text first
+    let contentHtml = linkifyText(post.URI || '');
 
-        let contentHtml;
-        if (githubMatch) {
-            contentHtml = createRepoCard(githubMatch[0]);
-        } else {
-            contentHtml = linkifyText(post.URI || '');
-        }
+    // Then check for GitHub URL
+    const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
+    const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
 
-        feedHtml += `
-            <div class="post-card">
-                <div class="post-header">
-                    <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}">${post.Rkey}</a></strong>
-                    <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
-                </div>
-                <div class="post-content">
-                    ${contentHtml}
-                </div>
-            </div>
-        `;
+    // If it's a GitHub URL, add the repo card after the link
+    if (githubMatch) {
+        contentHtml += '<br>' + createRepoCard(githubMatch[0]);
     }
-    document.getElementById('postContainer').innerHTML = feedHtml;
+
+    return `
+        <div class="post-card">
+            <div class="post-header">
+                <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}">${post.Rkey}</a></strong>
+                <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
+            </div>
+            <div class="post-content">
+                ${contentHtml}
+            </div>
+        </div>
+    `;
 }
 
 export function formatTimeUs(timeUs) {
@@ -172,10 +170,13 @@ export async function updateTimestamp() {
 }
 
 export async function fetchPosts() {
+    // Show cached posts first if available
     const cachedPosts = getCachedPosts();
     if (cachedPosts) {
         console.log('Found cached posts:', cachedPosts);
-        renderPosts(cachedPosts);
+        for (const post of cachedPosts) {
+            document.getElementById('postContainer').insertAdjacentHTML('beforeend', renderPost(post));
+        }
     } else {
         console.log('No cached posts found');
         document.getElementById('postContainer').innerHTML =
@@ -193,45 +194,54 @@ export async function fetchPosts() {
         // Cache the new data
         cachePosts(data);
 
-        // Render the new posts
-        renderPosts(data);
+        // Clear container if we had no cached posts
+        if (!cachedPosts) {
+            document.getElementById('postContainer').innerHTML = '';
+        } else {
+            // Clear cached posts if we're loading new ones
+            document.getElementById('postContainer').innerHTML = '';
+        }
 
-        // After rendering, fetch repository details for each repo card
-        const repoCards = document.querySelectorAll('.repo-card');
-        for (const card of repoCards) {
-            try {
-                const repoUrl = card.querySelector('a').getAttribute('href');
-                const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-                if (!match) {
-                    continue;
-                }
-                const [, username, repository] = match;
+        // Render and process each post one by one
+        for (const post of data) {
+            // Render the post
+            document.getElementById('postContainer').insertAdjacentHTML('beforeend', renderPost(post));
 
-                const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
-                if (!repoResponse.ok) {
-                    throw new Error(`HTTP error! status: ${repoResponse.status}`);
-                }
+            // Check for GitHub URL and load details if present
+            const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
+            const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
 
-                const repoData = await repoResponse.json();
-                const repoDetails = `
-                    <div class="repo-info">
-                        <p>${repoData.description || 'No description available'}</p>
-                        <div class="repo-stats">
-                            <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
-                            <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
-                            <span>${repoData.language || 'Unknown language'}</span>
+            if (githubMatch) {
+                try {
+                    const repoUrl = githubMatch[0];
+                    const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+
+                    // Fetch repository details
+                    const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
+                    if (!repoResponse.ok) {
+                        throw new Error(`HTTP error! status: ${repoResponse.status}`);
+                    }
+
+                    const repoData = await repoResponse.json();
+                    const repoDetails = `
+                        <div class="repo-info">
+                            <p>${repoData.description || 'No description available'}</p>
+                            <div class="repo-stats">
+                                <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
+                                <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
+                                <span>${repoData.language || 'Unknown language'}</span>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
 
-                const repoElement = document.getElementById(`repo-${username}-${repository}`);
-                if (repoElement) {
-                    repoElement.innerHTML = repoDetails;
-                }
-            } catch (error) {
-                console.error('Error fetching repository details:', error);
-                // Only try to update the error message if we have the username and repository
-                if (typeof username !== 'undefined' && typeof repository !== 'undefined') {
+                    // Update the repo details immediately
+                    const repoElement = document.getElementById(`repo-${username}-${repository}`);
+                    if (repoElement) {
+                        repoElement.innerHTML = repoDetails;
+                    }
+                } catch (error) {
+                    console.error('Error fetching repository details:', error);
+                    const [, username, repository] = githubMatch[0].match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
                     const repoElement = document.getElementById(`repo-${username}-${repository}`);
                     if (repoElement) {
                         repoElement.innerHTML = '<div class="error">Error loading repository details</div>';
@@ -242,7 +252,6 @@ export async function fetchPosts() {
     } catch (error) {
         console.error('Error fetching posts:', error);
 
-        // If we have cached content, keep showing it with an error message
         if (cachedPosts) {
             document.getElementById('postContainer').insertAdjacentHTML('beforebegin',
                 '<div class="alert alert-warning">Error loading new posts. Showing cached content.</div>');

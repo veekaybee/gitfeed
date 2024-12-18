@@ -93,3 +93,23 @@ h5 {
         padding: 16px;
     }
 }
+
+.loading {
+    padding: 20px;
+    text-align: center;
+    background: #f6f8fa;
+    border-radius: 6px;
+    margin: 10px 0;
+}
+
+.alert {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+}

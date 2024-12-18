@@ -35,7 +35,6 @@ jobs:
 
       - name: Sync executables
         run: |
-          cd 
           rsync -avz "ingest" "serve" ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
     

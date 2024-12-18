@@ -35,7 +35,8 @@ jobs:
 
       - name: Sync executables
         run: |
-          rsync -avz --exclude='/*/.local' "ingest" "serve" ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
+          cd 
+          rsync -avz "ingest" "serve" ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}
 
     
       - name: Restart executables

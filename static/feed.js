@@ -1,60 +1,19 @@
 // feed.js
 
-/**
- * Saves posts data to localStorage
- * @param {Array} data - Array of post data to cache
- */
-function cachePosts(data) {
-    try {
-        localStorage.setItem('cachedPosts', JSON.stringify({
-            timestamp: Date.now(),
-            posts: data
-        }));
-    } catch (error) {
-        console.error('Error caching posts:', error);
-    }
-}
-
-/**
- * Retrieves cached posts from localStorage
- * @returns {Array|null} Array of cached posts or null if no cache exists
- */
-function getCachedPosts() {
-    try {
-        const cached = localStorage.getItem('cachedPosts');
-        if (!cached) return null;
-
-        const { timestamp, posts } = JSON.parse(cached);
-        // Optional: Check if cache is too old (e.g., more than 1 hour)
-        if (Date.now() - timestamp > 3600000) {
-            localStorage.removeItem('cachedPosts');
-            return null;
-        }
-
-        return posts;
-    } catch (error) {
-        console.error('Error retrieving cached posts:', error);
-        return null;
-    }
-}
-
-/**
- * Renders posts to the container
- * @param {Array} posts - Array of posts to render
- */
-function renderPost(post) {
-    // Always linkify the text first
-    let contentHtml = linkifyText(post.URI || '');
-
-    // Then check for GitHub URL
+function isGithubRepo(uri) {
     const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
-    const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
+    return uri ? uri.match(githubRegex) : null;
+}
 
-    // If it's a GitHub URL, add the repo card after the link
+function renderContent(uri) {
+    const githubMatch = isGithubRepo(uri);
     if (githubMatch) {
-        contentHtml += '<br>' + createRepoCard(githubMatch[0]);
+        return createRepoCard(githubMatch[0]);
     }
+    return linkifyText(uri || '');
+}
 
+function renderPost(post) {
     return `
         <div class="post-card">
             <div class="post-header">
@@ -62,7 +21,7 @@ function renderPost(post) {
                 <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
             </div>
             <div class="post-content">
-                ${contentHtml}
+                ${renderContent(post.URI)}
             </div>
         </div>
     `;
@@ -129,8 +88,8 @@ export function createRepoCard(repoUrl) {
     const githubRegex = /github\.com\/([^\/]+)\/([^\/\s]+)/;
     const match = repoUrl.match(githubRegex);
 
-    if (!match) return repoUrl; // Return original URL if not a GitHub repo
-
+    // Return original URL if not a GitHub repo
+    if (!match) return repoUrl;
     const [, username, repository] = match;
 
     return `
@@ -170,18 +129,8 @@ export async function updateTimestamp() {
 }
 
 export async function fetchPosts() {
-    // Show cached posts first if available
-    const cachedPosts = getCachedPosts();
-    if (cachedPosts) {
-        console.log('Found cached posts:', cachedPosts);
-        for (const post of cachedPosts) {
-            document.getElementById('postContainer').insertAdjacentHTML('beforeend', renderPost(post));
-        }
-    } else {
-        console.log('No cached posts found');
-        document.getElementById('postContainer').innerHTML =
-            '<div class="loading">Loading posts...</div>';
-    }
+    document.getElementById('postContainer').innerHTML =
+        '<div class="loading">Loading posts...</div>';
 
     try {
         console.log('Fetching new posts...');
@@ -191,73 +140,67 @@ export async function fetchPosts() {
         }
         const data = await response.json();
 
-        // Cache the new data
-        cachePosts(data);
+        // Clear container
+        document.getElementById('postContainer').innerHTML = '';
 
-        // Clear container if we had no cached posts
-        if (!cachedPosts) {
-            document.getElementById('postContainer').innerHTML = '';
-        } else {
-            // Clear cached posts if we're loading new ones
-            document.getElementById('postContainer').innerHTML = '';
-        }
-
-        // Render and process each post one by one
-        for (const post of data) {
-            // Render the post
+        // First render all posts immediately
+        data.forEach(post => {
             document.getElementById('postContainer').insertAdjacentHTML('beforeend', renderPost(post));
+        });
 
-            // Check for GitHub URL and load details if present
+        // Process GitHub details in parallel
+        const githubPromises = data.map(post => {
             const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
             const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
 
             if (githubMatch) {
-                try {
-                    const repoUrl = githubMatch[0];
-                    const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-
-                    // Fetch repository details
-                    const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
-                    if (!repoResponse.ok) {
-                        throw new Error(`HTTP error! status: ${repoResponse.status}`);
-                    }
-
-                    const repoData = await repoResponse.json();
-                    const repoDetails = `
-                        <div class="repo-info">
-                            <p>${repoData.description || 'No description available'}</p>
-                            <div class="repo-stats">
-                                <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
-                                <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
-                                <span>${repoData.language || 'Unknown language'}</span>
-                            </div>
-                        </div>
-                    `;
-
-                    // Update the repo details immediately
-                    const repoElement = document.getElementById(`repo-${username}-${repository}`);
-                    if (repoElement) {
-                        repoElement.innerHTML = repoDetails;
-                    }
-                } catch (error) {
-                    console.error('Error fetching repository details:', error);
-                    const [, username, repository] = githubMatch[0].match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-                    const repoElement = document.getElementById(`repo-${username}-${repository}`);
-                    if (repoElement) {
-                        repoElement.innerHTML = '<div class="error">Error loading repository details</div>';
-                    }
-                }
+                return processGithubRepo(githubMatch[0]);
             }
-        }
+            return Promise.resolve(null);
+        });
+
+        await Promise.all(githubPromises);
+
     } catch (error) {
         console.error('Error fetching posts:', error);
+        document.getElementById('postContainer').innerHTML =
+            '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';
+    }
+}
 
-        if (cachedPosts) {
-            document.getElementById('postContainer').insertAdjacentHTML('beforebegin',
-                '<div class="alert alert-warning">Error loading new posts. Showing cached content.</div>');
-        } else {
-            document.getElementById('postContainer').innerHTML =
-                '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';
+async function processGithubRepo(repoUrl) {
+    try {
+        const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+
+        // Fetch repository details
+        const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
+        if (!repoResponse.ok) {
+            throw new Error(`HTTP error! status: ${repoResponse.status}`);
+        }
+
+        const repoData = await repoResponse.json();
+        const repoDetails = `
+            <div class="repo-info">
+                <p>${repoData.description || 'No description available'}</p>
+                <div class="repo-stats">
+                    <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
+                    <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
+                    <span>${repoData.language || 'Unknown language'}</span>
+                </div>
+            </div>
+        `;
+
+        // Update the repo details
+        const repoElement = document.getElementById(`repo-${username}-${repository}`);
+        if (repoElement) {
+            repoElement.innerHTML = repoDetails;
+        }
+    } catch (error) {
+        console.error('Error processing repository:', repoUrl, error);
+        const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+        const repoElement = document.getElementById(`repo-${username}-${repository}`);
+        if (repoElement) {
+            repoElement.innerHTML = '<div class="error">Error loading repository details</div>';
         }
     }
 }

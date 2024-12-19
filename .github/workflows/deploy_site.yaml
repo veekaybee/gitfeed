@@ -34,4 +34,11 @@ jobs:
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
             rsync -avz --delete ./static/ ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:${{ secrets.REMOTE_PATH }}/static/
-            
+
+      - name: Restart executables
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_path: .github/workflows/restart.sh

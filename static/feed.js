@@ -129,8 +129,8 @@ export async function updateTimestamp() {
 }
 
 export async function fetchPosts() {
-    document.getElementById('postContainer').innerHTML =
-        '<div class="loading">Loading posts...</div>';
+    const container = document.getElementById('postContainer');
+    container.innerHTML = '<div class="loading">Loading posts...</div>';
 
     try {
         console.log('Fetching new posts...');
@@ -138,34 +138,93 @@ export async function fetchPosts() {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
+        const posts = await response.json();
 
         // Clear container
-        document.getElementById('postContainer').innerHTML = '';
+        container.innerHTML = '';
 
-        // First render all posts immediately
-        data.forEach(post => {
-            document.getElementById('postContainer').insertAdjacentHTML('beforeend', renderPost(post));
+        // Immediately render all posts from database
+        posts.forEach(post => {
+            container.insertAdjacentHTML('beforeend', renderPost(post));
         });
 
-        // Process GitHub details in parallel
-        const githubPromises = data.map(post => {
+        // Process GitHub details in parallel without waiting
+        posts.forEach(post => {
             const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
             const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
 
             if (githubMatch) {
-                return processGithubRepo(githubMatch[0]);
+                processGithubRepo(githubMatch[0])
+                    .then(githubData => {
+                        if (githubData) {
+                            const postElement = container.querySelector(`[data-post-id="${post.id}"]`);
+                            updatePostWithGithubData(postElement, githubData);
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`Error fetching GitHub data for ${githubMatch[0]}:`, error);
+                        const postElement = container.querySelector(`[data-post-id="${post.id}"]`);
+                        if (postElement) {
+                            const githubInfo = postElement.querySelector('.github-info');
+                            if (githubInfo) {
+                                githubInfo.innerHTML = '<div class="text-sm text-gray-500">Unable to load GitHub data</div>';
+                            }
+                        }
+                    });
             }
-            return Promise.resolve(null);
         });
-
-        await Promise.all(githubPromises);
 
     } catch (error) {
         console.error('Error fetching posts:', error);
-        document.getElementById('postContainer').innerHTML =
+        container.innerHTML =
             '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';
     }
+}
+
+// Helper function to update post with GitHub data
+function updatePostWithGithubData(postElement, githubData) {
+    if (!postElement) return;
+
+    const githubInfo = postElement.querySelector('.github-info');
+    if (githubInfo) {
+        if (githubData.error) {
+            githubInfo.innerHTML = '<div class="text-sm text-gray-500">Unable to load GitHub data</div>';
+            return;
+        }
+
+        githubInfo.innerHTML = `
+            <div class="github-stats flex gap-4 text-sm text-gray-600">
+                <span title="Stars">⭐ ${formatNumber(githubData.stars)}</span>
+                <span title="Forks">🔄 ${formatNumber(githubData.forks)}</span>
+                <span title="Watchers">👀 ${formatNumber(githubData.watchers)}</span>
+            </div>
+            ${githubData.description ?
+            `<div class="github-description text-sm mt-2">${escapeHtml(githubData.description)}</div>`
+            : ''
+        }
+        `;
+    }
+}
+
+// Helper function to format numbers (e.g., 1000 -> 1k)
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+    }
+    return num.toString();
+}
+
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 async function processGithubRepo(repoUrl) {

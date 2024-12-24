@@ -178,7 +178,6 @@ export async function fetchPosts() {
         container.innerHTML = '';
 
         const renderedPosts = [];
-        const failedPosts = [];
 
         for (const post of posts) {
             container.insertAdjacentHTML('beforeend', renderSkeletonPost(post,post.URI));
@@ -186,19 +185,15 @@ export async function fetchPosts() {
             if (githubMatch) {
                 try {
                     const hydratedPost = await hydratePost(post, githubMatch[0]);
-                    container.insertAdjacentHTML('beforeend', hydratedPost);
+
+
                 } catch (error) {
                     console.error('Error fetching GitHub data for post:', error);
-                    failedPosts.push(post);
                 }
-            } else {
-                console.log("this post sucks..")
-                renderedPosts.push(null);
             }
         }
 
-        const allPosts = [...renderedPosts, ...failedPosts];
-        return allPosts;
+        container.insertAdjacentHTML('beforeend', renderedPosts);
     } catch (error) {
         console.error('Error fetching posts:', error);
         container.innerHTML = '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';

@@ -5,15 +5,52 @@ function isGithubRepo(uri) {
     return uri ? uri.match(githubRegex) : null;
 }
 
-function renderContent(uri) {
-    const githubMatch = isGithubRepo(uri);
-    if (githubMatch) {
-        return createRepoCard(githubMatch[0]);
+function getUserAndRepoFromURL(url) {
+    var match = url.match(/https:\/\/github\.com\/([^/]+)\/([^\/]+)/);
+    if (match) {
+        return [match[1], match[2]];
+    } else {
+        throw new Error("Invalid GitHub URL");
     }
-    return linkifyText(uri || '');
 }
 
-function renderPost(post) {
+async function hydratePost(post, repoUrl) {
+    try {
+        const [username, repository] = getUserAndRepoFromURL(repoUrl);
+        console.log(username, repository);
+
+        // Fetch repository details
+        const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
+        if (!repoResponse.ok) {
+            throw new Error(`HTTP error! status: ${repoResponse.status}`);
+        }
+        const repoData = await repoResponse.json();
+
+        return `
+            <div class="post-card">
+                <div class="post-header">
+                    <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}">${post.Rkey}</a></strong>
+                    <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
+                </div>
+                <div class="post-content">
+                <div class="repo-info">
+                <div class="repo-header">
+                    <i class="bi bi-github"></i>
+                    <p>${repoData.description || 'No description available'}</p>
+                    <div class="repo-stats">
+                        <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
+                        <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
+                        <span>${repoData.language || 'Unknown language'}</span>
+                    </div>
+                </div>
+                </div>
+            </div>`;
+    } catch (error) {
+        console.error('Error processing repository:', repoUrl, error);
+    }
+}
+
+function renderSkeletonPost(post,uri) {
     return `
         <div class="post-card">
             <div class="post-header">
@@ -21,11 +58,13 @@ function renderPost(post) {
                 <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
             </div>
             <div class="post-content">
-                ${renderContent(post.URI)}
+                ${linkifyText(uri || '')}
             </div>
         </div>
     `;
 }
+
+
 
 export function formatTimeUs(timeUs) {
     const timeMs = Math.floor(timeUs / 1000);
@@ -64,9 +103,8 @@ export function getTimeAgo(timestamp) {
     }
 }
 
-
-const advancedUrlRegex = /(?:(?:https?|ftp):\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)(?:\/[^\s]*)?/g;
 export function linkifyText(text) {
+    const advancedUrlRegex = /(?:(?:https?|ftp):\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)(?:\/[^\s]*)?/g;
     return text.replace(advancedUrlRegex, url => {
         let href = url;
         if (!url.startsWith('http')) {
@@ -83,29 +121,7 @@ export function linkifyText(text) {
     });
 }
 
-export function createRepoCard(repoUrl) {
-    // Extract username and repository from GitHub URL
-    const githubRegex = /github\.com\/([^\/]+)\/([^\/\s]+)/;
-    const match = repoUrl.match(githubRegex);
 
-    // Return original URL if not a GitHub repo
-    if (!match) return repoUrl;
-    const [, username, repository] = match;
-
-    return `
-        <div class="repo-card">
-            <div class="repo-header">
-                <i class="bi bi-github"></i>
-                <a href="${repoUrl}" target="_blank" rel="noopener noreferrer">
-                    ${username}/${repository}
-                </a>
-            </div>
-            <div class="repo-details" id="repo-${username}-${repository}">
-                <div class="loading">Loading repository details...</div>
-            </div>
-        </div>
-    `;
-}
 
 export async function updateTimestamp() {
     try {
@@ -128,6 +144,25 @@ export async function updateTimestamp() {
     }
 }
 
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+    }
+    return num.toString();
+}
+
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 export async function fetchPosts() {
     const container = document.getElementById('postContainer');
     container.innerHTML = '<div class="loading">Loading posts...</div>';
@@ -139,127 +174,33 @@ export async function fetchPosts() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const posts = await response.json();
-
-        // Clear container
+        // Clear container after "Loading posts"
         container.innerHTML = '';
 
-        // Immediately render all posts from database
-        posts.forEach(post => {
-            container.insertAdjacentHTML('beforeend', renderPost(post));
-        });
+        const renderedPosts = [];
+        const failedPosts = [];
 
-        // Process GitHub details in parallel without waiting
-        posts.forEach(post => {
-            const githubRegex = /(https:\/\/github\.com\/[^\/]+\/[^\/\s]+)/g;
-            const githubMatch = post.URI ? post.URI.match(githubRegex) : null;
-
+        for (const post of posts) {
+            container.insertAdjacentHTML('beforeend', renderSkeletonPost(post,post.URI));
+            const githubMatch = isGithubRepo(post.URI);
             if (githubMatch) {
-                processGithubRepo(githubMatch[0])
-                    .then(githubData => {
-                        if (githubData) {
-                            const postElement = container.querySelector(`[data-post-id="${post.id}"]`);
-                            updatePostWithGithubData(postElement, githubData);
-                        }
-                    })
-                    .catch(error => {
-                        console.error(`Error fetching GitHub data for ${githubMatch[0]}:`, error);
-                        const postElement = container.querySelector(`[data-post-id="${post.id}"]`);
-                        if (postElement) {
-                            const githubInfo = postElement.querySelector('.github-info');
-                            if (githubInfo) {
-                                githubInfo.innerHTML = '<div class="text-sm text-gray-500">Unable to load GitHub data</div>';
-                            }
-                        }
-                    });
+                try {
+                    const hydratedPost = await hydratePost(post, githubMatch[0]);
+                    container.insertAdjacentHTML('beforeend', hydratedPost);
+                } catch (error) {
+                    console.error('Error fetching GitHub data for post:', error);
+                    failedPosts.push(post);
+                }
+            } else {
+                console.log("this post sucks..")
+                renderedPosts.push(null);
             }
-        });
+        }
 
+        const allPosts = [...renderedPosts, ...failedPosts];
+        return allPosts;
     } catch (error) {
         console.error('Error fetching posts:', error);
-        container.innerHTML =
-            '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';
-    }
-}
-
-// Helper function to update post with GitHub data
-function updatePostWithGithubData(postElement, githubData) {
-    if (!postElement) return;
-
-    const githubInfo = postElement.querySelector('.github-info');
-    if (githubInfo) {
-        if (githubData.error) {
-            githubInfo.innerHTML = '<div class="text-sm text-gray-500">Unable to load GitHub data</div>';
-            return;
-        }
-
-        githubInfo.innerHTML = `
-            <div class="github-stats flex gap-4 text-sm text-gray-600">
-                <span title="Stars">⭐ ${formatNumber(githubData.stars)}</span>
-                <span title="Forks">🔄 ${formatNumber(githubData.forks)}</span>
-                <span title="Watchers">👀 ${formatNumber(githubData.watchers)}</span>
-            </div>
-            ${githubData.description ?
-            `<div class="github-description text-sm mt-2">${escapeHtml(githubData.description)}</div>`
-            : ''
-        }
-        `;
-    }
-}
-
-// Helper function to format numbers (e.g., 1000 -> 1k)
-function formatNumber(num) {
-    if (num >= 1000000) {
-        return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'k';
-    }
-    return num.toString();
-}
-
-// Helper function to escape HTML to prevent XSS
-function escapeHtml(unsafe) {
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-async function processGithubRepo(repoUrl) {
-    try {
-        const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-
-        // Fetch repository details
-        const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
-        if (!repoResponse.ok) {
-            throw new Error(`HTTP error! status: ${repoResponse.status}`);
-        }
-
-        const repoData = await repoResponse.json();
-        const repoDetails = `
-            <div class="repo-info">
-                <p>${repoData.description || 'No description available'}</p>
-                <div class="repo-stats">
-                    <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
-                    <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
-                    <span>${repoData.language || 'Unknown language'}</span>
-                </div>
-            </div>
-        `;
-
-        // Update the repo details
-        const repoElement = document.getElementById(`repo-${username}-${repository}`);
-        if (repoElement) {
-            repoElement.innerHTML = repoDetails;
-        }
-    } catch (error) {
-        console.error('Error processing repository:', repoUrl, error);
-        const [, username, repository] = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-        const repoElement = document.getElementById(`repo-${username}-${repository}`);
-        if (repoElement) {
-            repoElement.innerHTML = '<div class="error">Error loading repository details</div>';
-        }
+        container.innerHTML = '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';
     }
 }

@@ -17,5 +17,6 @@ func CreateRoutes(postService *handlers.PostService) {
 
 	http.HandleFunc("GET /api/v1/posts", postService.PostsGetHandler)
 	http.HandleFunc("GET /api/v1/timestamp", postService.TimeStampGetHandler)
+	http.HandleFunc("GET /api/v1/github/{username}/{repository}", handlers.HandleGitHubRepo)
 
 }

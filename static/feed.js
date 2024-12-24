@@ -20,7 +20,7 @@ async function hydratePost(post, repoUrl) {
         console.log(username, repository);
 
         // Fetch repository details
-        const repoResponse = await fetch(`https://api.github.com/repos/${username}/${repository}`);
+        const repoResponse = await fetch(`/github/${username}/${repository}`);
         if (!repoResponse.ok) {
             throw new Error(`HTTP error! status: ${repoResponse.status}`);
         }

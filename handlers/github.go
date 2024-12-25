@@ -10,6 +10,7 @@ import (
 const githubAPIURL = "https://api.github.com"
 
 func HandleGitHubRepo(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Processing github repo %s\n", r.URL.Path)
 	username := r.PathValue("username")
 	repository := r.PathValue("repository")
 

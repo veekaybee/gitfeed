@@ -20,22 +20,20 @@ async function hydratePost(post, repoUrl) {
         console.log(username, repository);
 
         // Fetch repository details
-        const repoResponse = await fetch(`/github/${username}/${repository}`);
+        const repoResponse = await fetch(`/api/v1/github/${username}/${repository}`);
+
         if (!repoResponse.ok) {
             throw new Error(`HTTP error! status: ${repoResponse.status}`);
         }
         const repoData = await repoResponse.json();
+        console.log("Repo data" + repoData)
 
         return `
-            <div class="post-card">
-                <div class="post-header">
-                    <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}">${post.Rkey}</a></strong>
-                    <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
-                </div>
                 <div class="post-content">
                 <div class="repo-info">
                 <div class="repo-header">
                     <i class="bi bi-github"></i>
+                     <a href="https://github.com/${repoData.full_name}" target="_blank" rel="noopener noreferrer">${repoData.name || 'No description available'}</a>
                     <p>${repoData.description || 'No description available'}</p>
                     <div class="repo-stats">
                         <span><i class="bi bi-star"></i> ${repoData.stargazers_count}</span>
@@ -44,7 +42,7 @@ async function hydratePost(post, repoUrl) {
                     </div>
                 </div>
                 </div>
-            </div>`;
+</div>`;
     } catch (error) {
         console.error('Error processing repository:', repoUrl, error);
     }
@@ -52,13 +50,14 @@ async function hydratePost(post, repoUrl) {
 
 function renderSkeletonPost(post,uri) {
     return `
-        <div class="post-card">
-            <div class="post-header">
-                <strong>Post: <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}">${post.Rkey}</a></strong>
+        <div class="post-card link-underline link-underline-opacity-0 link-underline-opacity-100-hover">
+            <div class="post-header link-underline link-underline-opacity-0 link-underline-opacity-100-hover">
+                <strong>🦋 <a href="https://bsky.app/profile/${post.Did}/post/${post.Rkey}">Post</a> </strong>
+                <strong class="post-link">${linkifyText(uri || '')}</a> </strong>
                 <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
             </div>
-            <div class="post-content">
-                ${linkifyText(uri || '')}
+            <div class="post-content post-content-skeleton">   
+                <div class="repo-header"></div>
             </div>
         </div>
     `;
@@ -103,20 +102,23 @@ export function getTimeAgo(timestamp) {
     }
 }
 
+function generateLinkWithDisplayText(url) {
+    const href = url; // Use the original URL
+    let displayText = '🔗 Link';
+
+    if (url.includes('github.com/')) {
+        // Extract everything after github.com/
+        const [_, repoName] = url.split('/');
+        displayText += ` ${repoName}`;
+    }
+
+    return { href, displayText };
+}
+
 export function linkifyText(text) {
     const advancedUrlRegex = /(?:(?:https?|ftp):\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})+)(?:\/[^\s]*)?/g;
     return text.replace(advancedUrlRegex, url => {
-        let href = url;
-        if (!url.startsWith('http')) {
-            href = 'https://' + url;
-        }
-
-        // Extract everything after github.com/
-        let displayText = url;
-        if (url.includes('github.com/')) {
-            displayText = url.split('github.com/')[1];
-        }
-
+        const { href, displayText } = generateLinkWithDisplayText(url);
         return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="word-wrap: break-word; word-break: break-all; max-width: 100%; display: inline-block;">${displayText}</a>`;
     });
 }
@@ -163,10 +165,11 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&#039;");
 }
 
+
+
 export async function fetchPosts() {
     const container = document.getElementById('postContainer');
     container.innerHTML = '<div class="loading">Loading posts...</div>';
-
     try {
         console.log('Fetching new posts...');
         const response = await fetch('/api/v1/posts');
@@ -174,26 +177,31 @@ export async function fetchPosts() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const posts = await response.json();
-        // Clear container after "Loading posts"
         container.innerHTML = '';
 
-        const renderedPosts = [];
+        console.log('Loop through posts...');
 
         for (const post of posts) {
-            container.insertAdjacentHTML('beforeend', renderSkeletonPost(post,post.URI));
-            const githubMatch = isGithubRepo(post.URI);
-            if (githubMatch) {
+            container.insertAdjacentHTML('beforeend', renderSkeletonPost(post, post.URI));
+        }
+        const repoCards = document.querySelectorAll('.post-card');
+        for (const card of repoCards) {
+            const repoUrl = card.querySelector('.post-link a').getAttribute('href');
+            console.log(repoUrl)
+            const githubMatch = isGithubRepo(repoUrl);
+            if (githubMatch && githubMatch[0]) {
                 try {
-                    const hydratedPost = await hydratePost(post, githubMatch[0]);
-
-
+                    const repoHeader = card.querySelector('.repo-header');
+                    repoHeader.innerHTML = '';
+                    const hydratedPost = await hydratePost(card, githubMatch[0]);
+                    repoHeader.insertAdjacentHTML('beforeend', hydratedPost) // replace it with hydratedPost output
                 } catch (error) {
                     console.error('Error fetching GitHub data for post:', error);
                 }
+            } else {
+                continue;
             }
         }
-
-        container.insertAdjacentHTML('beforeend', renderedPosts);
     } catch (error) {
         console.error('Error fetching posts:', error);
         container.innerHTML = '<div class="alert alert-danger">Error loading posts. Please try again later.</div>';

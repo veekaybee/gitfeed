@@ -7,14 +7,19 @@
     margin-right: auto;
 }
 
+.post-header a {
+    text-decoration: none;
+}
+
 .post-header {
     background-color: #f8f9fa;
     padding: 6px 8px;
     border-bottom: 1px solid #ddd;
     font-size: 0.9rem;
+    text-decoration: none;
 }
 
-.post-content {
+.post-content-skeleton:not(.post-content-updated)::before {
     padding: 8px;
     font-size: 0.9rem;
 }

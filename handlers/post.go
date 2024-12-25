@@ -140,7 +140,6 @@ func (us *PostService) PostsGetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error fetching posts", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewEncoder(w).Encode(posts); err != nil {
 		log.Printf("Error encoding posts to JSON: %v", err)
@@ -148,5 +147,6 @@ func (us *PostService) PostsGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	log.Printf("Fetched and returned %d posts\n", len(posts))
 }

@@ -141,7 +141,6 @@ func (us *PostService) PostsGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(posts); err != nil {
 		log.Printf("Error encoding posts to JSON: %v", err)

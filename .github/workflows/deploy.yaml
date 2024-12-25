@@ -30,7 +30,7 @@ jobs:
       - name: Build
         run: make build
 
-      - name: Fmt
+      - name: Test
         run: make test
 
       - name: Sync executables

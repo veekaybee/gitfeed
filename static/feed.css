@@ -2,7 +2,7 @@
     margin-bottom: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    max-width: 500px;
+    max-width: 400px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -13,15 +13,17 @@
 
 .post-header {
     background-color: #f8f9fa;
-    padding: 6px 8px;
+    padding: 6px 8px 6px 8px;
     border-bottom: 1px solid #ddd;
     font-size: 0.9rem;
     text-decoration: none;
 }
 
-.post-content-skeleton:not(.post-content-updated)::before {
-    padding: 8px;
+.repo-header {
+    padding: 6px 8px 6px 8px;
+    border-bottom: 1px solid #ddd;
     font-size: 0.9rem;
+    text-decoration: none;
 }
 
 .title-box {
@@ -97,24 +99,4 @@ h5 {
     .title-box {
         padding: 16px;
     }
-}
-
-.loading {
-    padding: 20px;
-    text-align: center;
-    background: #f6f8fa;
-    border-radius: 6px;
-    margin: 10px 0;
-}
-
-.alert {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 6px;
-}
-
-.alert-warning {
-    background-color: #fff3cd;
-    border: 1px solid #ffeeba;
-    color: #856404;
 }

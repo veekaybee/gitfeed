@@ -19,7 +19,7 @@ async function hydratePost(post, repoUrl) {
         const [username, repository] = getUserAndRepoFromURL(repoUrl);
         console.log(username, repository);
 
-        // Fetch repository details
+        // GitHub call
         const repoResponse = await fetch(`/api/v1/github/${username}/${repository}`);
 
         if (!repoResponse.ok) {
@@ -29,10 +29,10 @@ async function hydratePost(post, repoUrl) {
         console.log("Repo data" + repoData)
 
         return `
-                 <div class="post-card link-underline link-underline-opacity-0 link-underline-opacity-100-hover">
+                <div class="post-card link-underline link-underline-opacity-0 link-underline-opacity-100-hover">
                 <div class="post-content">
                 <div class="repo-info">
-                <div class="repo-header">
+                <div class="repo-header  style="padding: 10px 10px 10px 10px;">
                     <i class="bi bi-github"></i>
                      <a href="https://github.com/${repoData.full_name}" target="_blank" rel="noopener noreferrer">${repoData.name || 'No description available'}</a>
                     <p>${repoData.description || 'No description available'}</p>
@@ -58,7 +58,7 @@ function renderSkeletonPost(post,uri) {
                 <strong class="post-link">${linkifyText(uri || '')}</a> </strong>
                 <small class="text-muted float-end">Posted: ${formatTimeUs(post.TimeUs)} UTC</small>
             </div>
-            <div class="post-content post-content-skeleton">   
+            <div class="post-content">   
                 <div class="repo-header"></div>
             </div>
         </div>

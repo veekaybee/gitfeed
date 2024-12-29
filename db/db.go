@@ -77,9 +77,23 @@ type DBPost struct {
 func InitDB() (*sql.DB, error) {
 
 	var err error
-	DB, err := sql.Open("sqlite3", "gitfeed.db")
+	var gitfeed = "gitfeed.db"
+
+	DB, err := sql.Open("sqlite3", gitfeed)
 	if err != nil {
-		return nil, fmt.Errorf("error opening database: %v", err)
+		panic(err)
+	}
+
+	_, err = DB.Exec(`PRAGMA journal_mode=WAL;`)
+	if err != nil {
+		fmt.Println("Error setting WAL mode:", err)
+		panic(err)
+	}
+
+	_, err = DB.Exec(`PRAGMA busy_timeout = 5000;`)
+	if err != nil {
+		fmt.Println("Error setting WAL mode:", err)
+		panic(err)
 	}
 
 	err = DB.Ping()
@@ -87,7 +101,7 @@ func InitDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("error pinging database: %v", err)
 	}
 
-	fmt.Println("Connected!")
+	fmt.Println("Connected to database:", gitfeed)
 	return DB, nil
 }
 
@@ -98,7 +112,7 @@ func (pr *PostRepository) CreateTableIfNotExists(tableName string, columns map[s
 		columnDefs = append(columnDefs, fmt.Sprintf("%s %s", colName, colType))
 	}
 
-	fmt.Println("Creating table...")
+	fmt.Printf("Creating table %s", tableName)
 
 	// Construct the CREATE TABLE query
 	query := fmt.Sprintf(`
@@ -242,6 +256,8 @@ func (pr *PostRepository) DeletePosts() error {
 func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 	pr.lock.Lock()
 	defer pr.lock.Unlock()
+
+	log.Printf("Fetching top 10 posts desc from DB...")
 	sqlStmt := `SELECT  DISTINCT did, 
 	                             time_us, 
 								 kind, 
@@ -265,6 +281,7 @@ func (pr *PostRepository) GetAllPosts() ([]DBPost, error) {
 
 	var posts []DBPost
 
+	log.Printf("Iterating on rows...")
 	for rows.Next() {
 		var p DBPost
 
@@ -314,7 +331,6 @@ func (pr *PostRepository) GetTimeStamp() (int64, error) {
 		}
 		return 0, err
 	}
-	log.Printf("%d\n", timeUs)
 
 	return timeUs, nil
 }

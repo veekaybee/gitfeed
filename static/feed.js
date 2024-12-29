@@ -29,6 +29,7 @@ async function hydratePost(post, repoUrl) {
         console.log("Repo data" + repoData)
 
         return `
+                 <div class="post-card link-underline link-underline-opacity-0 link-underline-opacity-100-hover">
                 <div class="post-content">
                 <div class="repo-info">
                 <div class="repo-header">
@@ -40,6 +41,7 @@ async function hydratePost(post, repoUrl) {
                         <span><i class="bi bi-diagram-2"></i> ${repoData.forks_count}</span>
                         <span>${repoData.language || 'Unknown language'}</span>
                     </div>
+                </div>
                 </div>
                 </div>
 </div>`;

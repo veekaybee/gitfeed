@@ -14,6 +14,7 @@ func HandleGitHubRepo(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
 	repository := r.PathValue("repository")
 
+	log.Printf("Making GH API call... \n")
 	resp, err := http.Get(fmt.Sprintf("%s/repos/%s/%s", githubAPIURL, username, repository))
 	if err != nil {
 		log.Printf("Error getting GitHub repo data: %v", err)

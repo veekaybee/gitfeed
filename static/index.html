@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GitFeed</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="/static/favicon.ico" />
+
+    <script src="https://tarptaeya.github.io/repo-card/repo-card.js"></script>
+
+    <link rel="manifest" href="/site.webmanifest">
+    <script src=" https://code.jquery.com/jquery-3.6.0.min.js">
+    </script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="feed.css">
+</head>
+
+<body>
+<nav class="navbar navbar-dark fixed-top">
+    <div class="container-fluid">
+    </div>
+</nav>
+<div class="container mt-5 pt-5">
+    <div class="title-box">
+        <h1 class="display-4"> 🦋 10 Latest Bluesky GitHub Links 🦋 </h1>
+        <button type="button" class="btn btn-primary" onClick="window.location.reload();">Refresh
+        </button>
+        <a href="https://github.com/veekaybee/gitfeed" class="btn btn-success">Code</a>
+        <div></div>
+        <h5>
+            <div id="lastUpdated">Last updated: --:--:--</div>
+        </h5>
+    </div>
+    <div id="postContainer">
+        <p>Loading posts...</p>
+    </div>
+
+    <footer class="footer">
+        <hr>
+        <div class="container">
+            <span>💙 </span>
+            <span>&copy; 2024 Vicki Boykis, icon by <a href="https://www.freepik.com/author/user8839173/icons">iconixar</a></span>
+        </div>
+    </footer>
+</div>
+
+
+
+
+<script type="module" src="main.js"></script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

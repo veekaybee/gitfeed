@@ -249,7 +249,13 @@ func (pr *PostRepository) DeletePost(uuid string) error {
 func (pr *PostRepository) DeletePosts() error {
 	pr.lock.Lock()
 	defer pr.lock.Unlock()
-	sqlStmt := `DELETE FROM posts;`
+
+	log.Printf("Deleting old posts...")
+	sqlStmt := `DELETE FROM posts WHERE NOT EXISTS (
+    SELECT 1 FROM (
+        SELECT * FROM posts ORDER BY time_us DESC LIMIT 10
+    ) AS temp WHERE posts.did = temp.did AND posts.time_us = temp.time_us
+	);`
 
 	_, err := pr.db.Exec(sqlStmt)
 	if err != nil {

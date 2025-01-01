@@ -159,6 +159,15 @@ func (w *WebSocketManager) readPump(ctx context.Context) {
 	}
 }
 
+func cleanUpDb(pr *db.PostRepository) {
+	for {
+		timer := time.After(2 * time.Hour)
+		<-timer
+		log.Printf("Cleaning up posts...")
+		pr.DeletePosts()
+	}
+}
+
 func main() {
 	fmt.Println("Starting DB...")
 
@@ -170,6 +179,8 @@ func main() {
 	defer database.Close()
 
 	pr := db.NewPostRepository(database)
+
+	go cleanUpDb(pr)
 
 	postTableColumns := map[string]string{
 		"id":                "INTEGER PRIMARY KEY AUTOINCREMENT",

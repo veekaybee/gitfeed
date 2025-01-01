@@ -80,20 +80,7 @@ func (ps *PostService) PostWriteHandler(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func (ps *PostService) PostDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if err := ps.PostRepository.DeletePost(id); err != nil {
-		log.Printf("Failed to delete post: %s because %v", id, err)
-		w.WriteHeader(500)
-		return
-	}
-	log.Printf("Deleted post %s\n", id)
-
-	w.WriteHeader(http.StatusOK)
-
-}
-
-func (ps *PostService) PostsDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func (ps *PostService) DeletePosts(w http.ResponseWriter, r *http.Request) {
 	if err := ps.PostRepository.DeletePosts(); err != nil {
 		log.Printf("Failed to delete post because %v", err)
 		w.WriteHeader(500)

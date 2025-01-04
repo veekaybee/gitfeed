@@ -210,7 +210,7 @@ export async function fetchPosts() {
                     console.error('Error fetching GitHub data for post:', error);
                 }
             } else {
-                let link = `<a href="$repoUrl" target="_blank" rel="noopener noreferrer">${repoUrl}</a>`
+                let link = '<a href="' + repoUrl + '" target="_blank" rel="noopener noreferrer">' + repoUrl + '</a>';
                 repoHeader.innerHTML = link;
                 continue;
             }

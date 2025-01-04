@@ -3,6 +3,9 @@ name: Push to prod
 on:
   push:
     branches: [main]
+  pull_request:
+    branches:
+      - "main"
   workflow_dispatch: # manual
 
 jobs:
@@ -17,12 +20,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Setup Golang with cache
+        uses: magnetikonline/action-golang-cache@v5
         with:
-          go-version: '1.21.x'
-          cache-dependency-path: |
-            go.sum
+            go-version: ~1.22
       
       - name: Fmt
         run: make fmt

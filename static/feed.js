@@ -198,13 +198,14 @@ export async function fetchPosts() {
         }
         const repoCards = document.querySelectorAll('.post-card');
         for (const card of repoCards) {
+            const repoHeader = card.querySelector('.repo-header');
             const repoUrl = card.querySelector('.post-link a').getAttribute('href');
-            console.log(repoUrl)
+            console.log("RepoURL " + repoUrl)
+            let link = `<a href="$repoUrl" target="_blank" rel="noopener noreferrer">${repoUrl}</a>`
+            repoHeader.innerHTML = link;
             const githubMatch = isGithubRepo(repoUrl);
             if (githubMatch && githubMatch[0]) {
                 try {
-                    const repoHeader = card.querySelector('.repo-header');
-                    repoHeader.innerHTML = '';
                     const hydratedPost = await hydratePost(card, githubMatch[0]);
                     repoHeader.insertAdjacentHTML('beforeend', hydratedPost) // replace it with hydratedPost output
                 } catch (error) {

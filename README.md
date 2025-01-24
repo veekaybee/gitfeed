@@ -11,26 +11,26 @@ A Go-based web app that collects all posts with GitHub links from the [Bluesky J
 
 ## Running: 
 
-Gitfeed consists of a post ingest/delete process and a frontend. 
+Gitfeed consists of a post ingest/delete process and a front-end. 
 
 1. `git clone`
 2.  Kill all instances of running application
 3.  Run application 
-    + `make run-serve`  # Runs the API and frontend
-    + `make run-ingest` # Runs the ingest from the jetstream
+    + `make run-serve`  # Runs the API and front-end
+    + `make run-ingest` # Runs the ingest from the Jetstream
 
 ## Developing:
 
-Gitfeed inclues a Go API that abstracts the repository pattern over a SQLite db. Code can be built and deployed using Go binaries. 
-The frontend is pure CSS/HTML/Javascript and can be developed ad-hoc without npm. 
+Gitfeed includes a Go API that abstracts the repository pattern over a SQLite db. Code can be built and deployed using Go binaries. 
+The front-end is pure CSS/HTML/Javascript and can be developed ad-hoc without npm. 
 
 <div style="text-align: center;"><img src="/architecture.png" alt="drawing" width="400"/></div>
 
 To run both, build the Go binary to ingest the data and start the front-end to serve the app and the API. 
 
 1. `git clone`
-2. Backend lives in `cmd`, 'routes', `handlers`, and `db`
-3. Frontend lives in `static`
+2. Backend lives in `cmd`, `routes`, `handlers`, and `db`
+3. Front-end lives in `static`
 4. Use makefile-based development: `make run-serve`, `make run-ingest` for quick dev loops.
 
 
@@ -40,11 +40,11 @@ Bluesky is an open social network running on [the AT Protocol](https://github.co
 
 One of the key features developers can do is [create custom feeds of content](https://docs.bsky.app/docs/starter-templates/custom-feeds) based on either simple heuristics like regex, or collecting data from the firehose for machine-learning style feeds including lookup with embedding models, activity aggregation, etc.  
 
-This repo started exploring the idea of creating a custom feed and publishing it to my own PDS [in Go](https://github.com/veekaybee/gitfeed/blob/main/publishXRPC.go). It since moved to consuming directly from Jetstream, a lighter (and less stable) implementation that doesn't include the full scope of history that the firehose does [for every entry in a user's PDS.](https://jazco.dev/2024/09/24/jetstream/.) The tradeoff is that we are now consuming untrusted elements; however, since this is from the bluesky social relay, it's fine in ways that it might not be for other, less official relays.   
+This repo started exploring the idea of creating a custom feed and publishing it to my own PDS [in Go](https://github.com/veekaybee/gitfeed/blob/main/publishXRPC.go). It has since moved to consuming directly from Jetstream, a lighter (and less stable) implementation that doesn't include the full scope of history that the firehose does [for every entry in a user's PDS.](https://jazco.dev/2024/09/24/jetstream/.) The tradeoff is that we are now consuming untrusted elements; however, since this is from the Bluesky social relay, it's fine in ways that it might not be for other, less official relays.   
 
 ## Looking at events in the Jetstream
 
-You can check GitHub events streaming to jetstream with: 
+You can check GitHub events streaming to Jetstream with: 
 
 ```sh
 websocat wss://jetstream2.us-east.bsky.network/subscribe\?wantedCollections=app.bsky.feed.post | grep "github" | jq .
